@@ -1,6 +1,6 @@
 # College Meal Plan Calculator
 
-A small multi-user app: anyone types a username (e.g. `simon.reeder`), no password,
+A small multi-user app: anyone types a username (e.g. `firstname.lastname`), no password,
 and their meal-plan budget is saved server-side in Vercel Blob storage so it follows
 them across devices. It's also a PWA, so it can be added to a phone's home screen.
 
@@ -40,8 +40,9 @@ to a couple of hours.
 
 ## Using it
 
-- Open the site, type a username (letters, numbers, dots and dashes only, since it's
-  just an identifier rather than a real login), then tap Continue.
+- Open the site, type a username such as `firstname.lastname` (letters, numbers, dots
+  and dashes only, since it's just an identifier rather than a real login), then tap
+  Continue. A name that hasn't been used before simply starts a fresh budget.
 - "switch user" at the top lets someone else use the same device or browser.
 - On iPhone: Share → Add to Home Screen. On Android: browser menu → Add to Home Screen.
 
