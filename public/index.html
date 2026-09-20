@@ -307,11 +307,15 @@
     setSaveStatus('Loading…');
     try {
       const res = await fetch('/api/budget?user=' + encodeURIComponent(username));
+      if (!res.ok) throw new Error('server returned ' + res.status);
       const json = await res.json();
       applyState(json && json.data);
       setSaveStatus('');
     } catch (e) {
-      setSaveStatus('Could not load — showing a blank budget.');
+      // Reset to defaults too, so a failed load can't leave the previous
+      // user's numbers on screen under this user's name.
+      applyState(null);
+      setSaveStatus('Could not load — showing a blank budget. Changes may not save.');
     }
   }
 
@@ -329,11 +333,24 @@
     if (!currentUser) return;
     const state = collectState();
     try {
-      await fetch('/api/budget', {
+      const res = await fetch('/api/budget', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ user: currentUser, data: state })
       });
+      // fetch only rejects on network failure, so a 4xx/5xx lands here as a
+      // resolved promise. Without this check a rejected save reported success.
+      if (!res.ok) {
+        let detail = '';
+        try {
+          const body = await res.json();
+          detail = (body && (body.error || body.detail)) || '';
+        } catch (parseErr) {}
+        setSaveStatus(detail
+          ? 'Could not save — ' + detail
+          : 'Could not save — server error ' + res.status + '.');
+        return;
+      }
       setSaveStatus('Saved');
       setTimeout(() => setSaveStatus(''), 1200);
     } catch (e) {
@@ -356,24 +373,32 @@
     };
   }
 
+  // Every field a saved profile can carry, paired with the value it resets to.
+  // applyState resets before applying: without that, anything the previous user
+  // typed survives into the next user's session and gets saved under their name.
+  const FIELD_DEFAULTS = [
+    [endDateEl, 'endDate', ''],
+    [balanceEl, 'balance', ''],
+    [costBreakfastEl, 'costBreakfast', ''],
+    [costLunchEl, 'costLunch', ''],
+    [costDinnerEl, 'costDinner', ''],
+    [bfInRoomEl, 'bfInRoom', '0'],
+    [lunchInRoomEl, 'lunchInRoom', '0'],
+    [dinnerOutEl, 'dinnerOut', '0'],
+    [dinnerInRoomEl, 'dinnerInRoom', '0']
+  ];
+
   function applyState(data) {
     awayRanges = [];
     idCounter = 0;
-    if (data) {
-      if (data.endDate) endDateEl.value = data.endDate;
-      if (data.balance !== undefined) balanceEl.value = data.balance;
-      if (data.costBreakfast !== undefined) costBreakfastEl.value = data.costBreakfast;
-      if (data.costLunch !== undefined) costLunchEl.value = data.costLunch;
-      if (data.costDinner !== undefined) costDinnerEl.value = data.costDinner;
-      if (data.bfInRoom !== undefined) bfInRoomEl.value = data.bfInRoom;
-      if (data.lunchInRoom !== undefined) lunchInRoomEl.value = data.lunchInRoom;
-      if (data.dinnerOut !== undefined) dinnerOutEl.value = data.dinnerOut;
-      if (data.dinnerInRoom !== undefined) dinnerInRoomEl.value = data.dinnerInRoom;
-      if (Array.isArray(data.awayRanges)) {
-        awayRanges = data.awayRanges.map(r => ({ ...r, id: idCounter++ }));
-      }
-    } else {
-      allInputs.forEach(i => { if (i !== bfInRoomEl && i !== lunchInRoomEl && i !== dinnerOutEl && i !== dinnerInRoomEl) i.value = ''; });
+    FIELD_DEFAULTS.forEach(([node, key, fallback]) => {
+      const saved = data ? data[key] : undefined;
+      node.value = (saved === undefined || saved === null) ? fallback : saved;
+    });
+    if (data && Array.isArray(data.awayRanges)) {
+      awayRanges = data.awayRanges
+        .filter(r => r && typeof r === 'object')
+        .map(r => ({ start: r.start || '', end: r.end || '', id: idCounter++ }));
     }
     renderAwayList();
     calculate();
@@ -433,7 +458,16 @@
     const d = new Date(str + 'T00:00:00');
     return isNaN(d.getTime()) ? null : d;
   }
-  function daysBetweenInclusive(a, b) { return Math.floor((b.getTime() - a.getTime()) / 86400000) + 1; }
+  // Count calendar days, not elapsed milliseconds. A daylight-saving day is 23
+  // or 25 hours long, which used to drop a day off any span crossing the spring
+  // change — exactly the spring-quarter spans where the balance is forfeited.
+  function utcDayValue(d) { return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function dayKey(d) {
+    const mo = String(d.getMonth() + 1).padStart(2, '0');
+    const da = String(d.getDate()).padStart(2, '0');
+    return d.getFullYear() + '-' + mo + '-' + da;
+  }
+  function daysBetweenInclusive(a, b) { return Math.round((utcDayValue(b) - utcDayValue(a)) / 86400000) + 1; }
   function clampNonNeg(n) { return Math.max(0, isNaN(n) ? 0 : n); }
   function fmtMoney(n) { const sign = n < 0 ? '-' : ''; return sign + '$' + Math.abs(n).toFixed(2); }
 
@@ -483,7 +517,7 @@
       const from = s < today ? today : s;
       const to = e > end ? end : e;
       if (from > to) return;
-      for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) awaySet.add(d.toISOString().slice(0, 10));
+      for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) awaySet.add(dayKey(d));
     });
 
     const awayCount = awaySet.size;
