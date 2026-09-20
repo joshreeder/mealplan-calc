@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SU Meal Plan Budget</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#b23a2f">
+<style>
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+
+    --bg: #f6f5f2;
+    --card: #ffffff;
+    --ink: #1c1c1e;
+    --ink-soft: #6b6b70;
+    --accent: #b23a2f;
+    --accent-soft: #f4e3e0;
+    --line: #e6e3dd;
+    --good: #2f7a4f;
+    --good-soft: #e5f2ea;
+    --blue: #2f5f9e;
+    --blue-soft: #e4ecf6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17161a; --card: #221f24; --ink: #f2f0ec; --ink-soft: #a8a5ab;
+      --accent: #e2685a; --accent-soft: #3a2624; --line: #34313a;
+      --good: #6fcf97; --good-soft: #1e3327; --blue: #7fa8e0; --blue-soft: #1e2a3a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17161a; --card: #221f24; --ink: #f2f0ec; --ink-soft: #a8a5ab;
+    --accent: #e2685a; --accent-soft: #3a2624; --line: #34313a;
+    --good: #6fcf97; --good-soft: #1e3327; --blue: #7fa8e0; --blue-soft: #1e2a3a;
+  }
+  html, body { height: 100%; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 28px 20px 60px; }
+  h1 { font-size: 1.4rem; font-weight: 700; margin: 0 0 2px; letter-spacing: -0.01em; }
+  .sub { color: var(--ink-soft); font-size: 0.88rem; margin: 0 0 22px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px 18px 20px; margin-bottom: 16px; }
+  .card h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); margin: 0 0 4px; font-weight: 600; }
+  .card .hint { font-size: 0.8rem; color: var(--ink-soft); margin: 0 0 14px; }
+  label { display: block; font-size: 0.88rem; font-weight: 600; margin-bottom: 6px; }
+  input[type="date"], input[type="number"], input[type="text"] {
+    width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--bg); color: var(--ink); font-size: 1rem; font-family: inherit; -webkit-appearance: none;
+  }
+  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .row { display: flex; gap: 10px; margin-bottom: 12px; }
+  .row > div { flex: 1; min-width: 0; }
+  .row3 { display: flex; gap: 8px; margin-bottom: 12px; }
+  .row3 > div { flex: 1; min-width: 0; }
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .subgroup { margin-bottom: 16px; }
+  .subgroup:last-child { margin-bottom: 0; }
+  .subgroup .sg-title { font-size: 0.82rem; font-weight: 600; margin-bottom: 8px; }
+  .away-item { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed var(--line); }
+  .away-item:last-of-type { border-bottom: none; padding-bottom: 0; }
+  .away-item .field { flex: 1; margin-bottom: 0; }
+  .away-item label { font-size: 0.76rem; margin-bottom: 4px; }
+  .remove-btn { background: none; border: none; color: var(--accent); font-size: 1.4rem; line-height: 1; cursor: pointer; padding: 8px 4px; flex-shrink: 0; }
+  .add-btn { width: 100%; padding: 10px; margin-top: 6px; border: 1px dashed var(--accent); background: var(--accent-soft); color: var(--accent); border-radius: 10px; font-weight: 600; font-size: 0.88rem; cursor: pointer; }
+  .empty-note { color: var(--ink-soft); font-size: 0.85rem; font-style: italic; }
+  .result-card { border-radius: 16px; padding: 20px 18px; text-align: center; margin-bottom: 16px; }
+  .result-card.flat { background: var(--good-soft); border: 1px solid var(--good); }
+  .result-card.habits { background: var(--blue-soft); border: 1px solid var(--blue); }
+  .result-card .big { font-size: 2.3rem; font-weight: 800; letter-spacing: -0.02em; }
+  .result-card.flat .big { color: var(--good); }
+  .result-card.habits .big { color: var(--blue); }
+  .result-card .label { font-size: 0.85rem; color: var(--ink-soft); margin-top: 2px; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+  .stat { background: var(--bg); border-radius: 10px; padding: 10px; text-align: center; }
+  .stat .num { font-size: 1.15rem; font-weight: 700; }
+  .stat .lbl { font-size: 0.72rem; color: var(--ink-soft); margin-top: 1px; }
+  .info-box { background: var(--accent-soft); border-radius: 12px; padding: 14px; font-size: 0.84rem; line-height: 1.45; margin-bottom: 16px; }
+  .info-box strong { color: var(--accent); }
+  .warn { color: var(--accent); font-size: 0.82rem; margin-top: 8px; }
+  .today-note { font-size: 0.78rem; color: var(--ink-soft); margin-top: -14px; margin-bottom: 20px; }
+  .section-label { font-size: 0.95rem; font-weight: 700; margin: 24px 0 10px; }
+
+  /* Login view */
+  #loginView { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+  .login-card { max-width: 360px; width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 28px 24px; text-align: center; }
+  .login-card h1 { margin-bottom: 6px; }
+  .login-card p { color: var(--ink-soft); font-size: 0.88rem; margin: 0 0 20px; }
+  .login-card input { text-align: center; font-size: 1.05rem; margin-bottom: 14px; }
+  .login-btn { width: 100%; padding: 12px; border: none; border-radius: 10px; background: var(--accent); color: #fff; font-weight: 700; font-size: 1rem; cursor: pointer; }
+  .login-hint { font-size: 0.76rem; color: var(--ink-soft); margin-top: 14px; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .whoami { font-size: 0.8rem; color: var(--ink-soft); }
+  .switch-user { background: none; border: none; color: var(--accent); font-size: 0.8rem; cursor: pointer; padding: 0; }
+  .save-status { font-size: 0.74rem; color: var(--ink-soft); text-align: right; margin-top: -10px; margin-bottom: 18px; min-height: 1em; }
+
+  #appView { display: none; }
+</style>
+</head>
+<body>
+
+<div id="loginView">
+  <div class="login-card">
+    <h1>🍽️ SU Meals</h1>
+    <p>Enter your name to load or start your own meal plan budget.</p>
+    <input type="text" id="usernameInput" placeholder="e.g. simon.reeder" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <button class="login-btn" id="loginBtn" type="button">Continue</button>
+    <div class="login-hint">No password — just remembers you by name on this device. Don't put anything private in here.</div>
+  </div>
+</div>
+
+<div id="appView">
+<div class="wrap">
+  <div class="topbar">
+    <div class="whoami" id="whoami"></div>
+    <button class="switch-user" id="switchUserBtn" type="button">switch user</button>
+  </div>
+  <h1>🍽️ Meal Plan Budget</h1>
+  <p class="sub">Figure out how much you can spend per meal for the rest of the semester — and what you'll have left based on how you actually eat.</p>
+  <p class="today-note" id="todayNote"></p>
+  <p class="save-status" id="saveStatus">&nbsp;</p>
+
+  <div class="card">
+    <h2>Semester</h2>
+    <div class="field">
+      <label for="endDate">Last day of the semester</label>
+      <input type="date" id="endDate">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Time you'll be away (breaks, trips home, etc.)</h2>
+    <div id="awayList"></div>
+    <div class="empty-note" id="awayEmptyNote">No time away added — add any breaks or trips so those days aren't counted.</div>
+    <button class="add-btn" id="addAwayBtn" type="button">+ Add time away</button>
+  </div>
+
+  <div class="card">
+    <h2>Meal Plan Balance</h2>
+    <div class="field">
+      <label for="balance">Remaining balance ($)</label>
+      <input type="number" id="balance" min="0" step="1" inputmode="decimal" placeholder="e.g. 850">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Your usual meal costs</h2>
+    <p class="hint">What you typically spend per meal when you use the meal plan.</p>
+    <div class="row3">
+      <div><label for="costBreakfast">Breakfast $</label><input type="number" id="costBreakfast" min="0" step="0.25" inputmode="decimal" placeholder="8"></div>
+      <div><label for="costLunch">Lunch $</label><input type="number" id="costLunch" min="0" step="0.25" inputmode="decimal" placeholder="11"></div>
+      <div><label for="costDinner">Dinner $</label><input type="number" id="costDinner" min="0" step="0.25" inputmode="decimal" placeholder="14"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>A typical week</h2>
+    <p class="hint">How many times a week you skip the meal plan for each meal — these get subtracted before figuring your budget.</p>
+    <div class="subgroup">
+      <div class="sg-title">Breakfast in your room (times/week)</div>
+      <input type="number" id="bfInRoom" min="0" max="7" step="1" value="0">
+    </div>
+    <div class="subgroup">
+      <div class="sg-title">Lunch in your room (times/week)</div>
+      <input type="number" id="lunchInRoom" min="0" max="7" step="1" value="0">
+    </div>
+    <div class="row">
+      <div><div class="sg-title">Dinner out (times/week)</div><input type="number" id="dinnerOut" min="0" max="7" step="1" value="0"></div>
+      <div><div class="sg-title">Dinner in room (times/week)</div><input type="number" id="dinnerInRoom" min="0" max="7" step="1" value="0"></div>
+    </div>
+  </div>
+
+  <div class="section-label">If you spread it evenly</div>
+  <div class="result-card flat" id="flatResultCard">
+    <div class="big" id="perMealAmount">—</div>
+    <div class="label">per meal remaining</div>
+    <div class="stat-grid">
+      <div class="stat"><div class="num" id="daysLeft">—</div><div class="lbl">eating days left</div></div>
+      <div class="stat"><div class="num" id="mealsLeft">—</div><div class="lbl">on-plan meals left</div></div>
+      <div class="stat"><div class="num" id="perDayAmount">—</div><div class="lbl">per day</div></div>
+      <div class="stat"><div class="num" id="awayDaysCount">—</div><div class="lbl">days away excluded</div></div>
+    </div>
+    <div class="warn" id="warnMsg"></div>
+  </div>
+
+  <div class="section-label">Based on how you actually eat</div>
+  <div class="result-card habits" id="habitsResultCard">
+    <div class="big" id="leftoverAmount">—</div>
+    <div class="label" id="leftoverLabel">projected left at semester's end</div>
+    <div class="stat-grid">
+      <div class="stat"><div class="num" id="weeklySpendStat">—</div><div class="lbl">projected spend / week</div></div>
+      <div class="stat"><div class="num" id="onPlanMealsWeekStat">—</div><div class="lbl">on-plan meals / week</div></div>
+      <div class="stat"><div class="num" id="weeksLeftStat">—</div><div class="lbl">weeks left</div></div>
+      <div class="stat"><div class="num" id="totalProjectedSpendStat">—</div><div class="lbl">total projected spend</div></div>
+    </div>
+  </div>
+
+  <div class="info-box">
+    <strong>Heads up:</strong> Seattle U meal plans run on quarters, and any leftover balance carries automatically into the next quarter, up to $250 (the rollover account itself caps at $250 too — you use up the new quarter's plan before dipping into it). Anything left at the end of spring quarter is forfeited and does <strong>not</strong> carry into the next academic year. So the goal is to land near $0 by the end of spring, not necessarily each quarter.
+  </div>
+</div>
+</div>
+
+<script>
+(function () {
+  const LOCAL_USER_KEY = 'suMeals.username';
+  const el = (id) => document.getElementById(id);
+
+  const loginView = el('loginView');
+  const appView = el('appView');
+  const usernameInput = el('usernameInput');
+  const loginBtn = el('loginBtn');
+  const switchUserBtn = el('switchUserBtn');
+  const whoami = el('whoami');
+  const saveStatus = el('saveStatus');
+
+  const endDateEl = el('endDate');
+  const balanceEl = el('balance');
+  const costBreakfastEl = el('costBreakfast');
+  const costLunchEl = el('costLunch');
+  const costDinnerEl = el('costDinner');
+  const bfInRoomEl = el('bfInRoom');
+  const lunchInRoomEl = el('lunchInRoom');
+  const dinnerOutEl = el('dinnerOut');
+  const dinnerInRoomEl = el('dinnerInRoom');
+
+  const awayListEl = el('awayList');
+  const awayEmptyNote = el('awayEmptyNote');
+  const addAwayBtn = el('addAwayBtn');
+  const todayNote = el('todayNote');
+
+  const perMealAmount = el('perMealAmount');
+  const perDayAmount = el('perDayAmount');
+  const daysLeft = el('daysLeft');
+  const mealsLeft = el('mealsLeft');
+  const awayDaysCount = el('awayDaysCount');
+  const warnMsg = el('warnMsg');
+
+  const leftoverAmount = el('leftoverAmount');
+  const leftoverLabel = el('leftoverLabel');
+  const weeklySpendStat = el('weeklySpendStat');
+  const onPlanMealsWeekStat = el('onPlanMealsWeekStat');
+  const weeksLeftStat = el('weeksLeftStat');
+  const totalProjectedSpendStat = el('totalProjectedSpendStat');
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  todayNote.textContent = "Today's date: " + today.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  let awayRanges = [];
+  let idCounter = 0;
+  let currentUser = null;
+  let saveTimer = null;
+
+  const allInputs = [
+    endDateEl, balanceEl, costBreakfastEl, costLunchEl, costDinnerEl,
+    bfInRoomEl, lunchInRoomEl, dinnerOutEl, dinnerInRoomEl
+  ];
+
+  function sanitize(u) {
+    return String(u || '').toLowerCase().trim().replace(/[^a-z0-9._-]/g, '');
+  }
+
+  // ---- Login flow ----
+  function showLogin() {
+    appView.style.display = 'none';
+    loginView.style.display = 'flex';
+    usernameInput.value = '';
+    usernameInput.focus();
+  }
+
+  function showApp(username) {
+    currentUser = username;
+    whoami.textContent = username;
+    loginView.style.display = 'none';
+    appView.style.display = 'block';
+    try { localStorage.setItem(LOCAL_USER_KEY, username); } catch (e) {}
+    loadFromServer(username);
+  }
+
+  loginBtn.addEventListener('click', () => {
+    const u = sanitize(usernameInput.value);
+    if (!u) { usernameInput.focus(); return; }
+    showApp(u);
+  });
+  usernameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') loginBtn.click(); });
+
+  switchUserBtn.addEventListener('click', () => {
+    try { localStorage.removeItem(LOCAL_USER_KEY); } catch (e) {}
+    currentUser = null;
+    showLogin();
+  });
+
+  // ---- Server load/save ----
+  async function loadFromServer(username) {
+    setSaveStatus('Loading…');
+    try {
+      const res = await fetch('/api/budget?user=' + encodeURIComponent(username));
+      const json = await res.json();
+      applyState(json && json.data);
+      setSaveStatus('');
+    } catch (e) {
+      setSaveStatus('Could not load — showing a blank budget.');
+    }
+  }
+
+  function setSaveStatus(text) {
+    saveStatus.textContent = text || '\u00A0';
+  }
+
+  function scheduleSave() {
+    setSaveStatus('Saving…');
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveToServer, 600);
+  }
+
+  async function saveToServer() {
+    if (!currentUser) return;
+    const state = collectState();
+    try {
+      await fetch('/api/budget', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: currentUser, data: state })
+      });
+      setSaveStatus('Saved');
+      setTimeout(() => setSaveStatus(''), 1200);
+    } catch (e) {
+      setSaveStatus('Could not save — check your connection.');
+    }
+  }
+
+  function collectState() {
+    return {
+      endDate: endDateEl.value,
+      balance: balanceEl.value,
+      costBreakfast: costBreakfastEl.value,
+      costLunch: costLunchEl.value,
+      costDinner: costDinnerEl.value,
+      bfInRoom: bfInRoomEl.value,
+      lunchInRoom: lunchInRoomEl.value,
+      dinnerOut: dinnerOutEl.value,
+      dinnerInRoom: dinnerInRoomEl.value,
+      awayRanges: awayRanges.map(({ start, end }) => ({ start, end }))
+    };
+  }
+
+  function applyState(data) {
+    awayRanges = [];
+    idCounter = 0;
+    if (data) {
+      if (data.endDate) endDateEl.value = data.endDate;
+      if (data.balance !== undefined) balanceEl.value = data.balance;
+      if (data.costBreakfast !== undefined) costBreakfastEl.value = data.costBreakfast;
+      if (data.costLunch !== undefined) costLunchEl.value = data.costLunch;
+      if (data.costDinner !== undefined) costDinnerEl.value = data.costDinner;
+      if (data.bfInRoom !== undefined) bfInRoomEl.value = data.bfInRoom;
+      if (data.lunchInRoom !== undefined) lunchInRoomEl.value = data.lunchInRoom;
+      if (data.dinnerOut !== undefined) dinnerOutEl.value = data.dinnerOut;
+      if (data.dinnerInRoom !== undefined) dinnerInRoomEl.value = data.dinnerInRoom;
+      if (Array.isArray(data.awayRanges)) {
+        awayRanges = data.awayRanges.map(r => ({ ...r, id: idCounter++ }));
+      }
+    } else {
+      allInputs.forEach(i => { if (i !== bfInRoomEl && i !== lunchInRoomEl && i !== dinnerOutEl && i !== dinnerInRoomEl) i.value = ''; });
+    }
+    renderAwayList();
+    calculate();
+  }
+
+  // ---- Away list UI ----
+  function renderAwayList() {
+    awayListEl.innerHTML = '';
+    awayEmptyNote.style.display = awayRanges.length ? 'none' : 'block';
+    awayRanges.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'away-item';
+
+      const startField = document.createElement('div');
+      startField.className = 'field';
+      const startLabel = document.createElement('label');
+      startLabel.textContent = 'From';
+      const startInput = document.createElement('input');
+      startInput.type = 'date';
+      startInput.value = item.start || '';
+      startInput.addEventListener('change', () => { item.start = startInput.value; scheduleSave(); calculate(); });
+      startField.appendChild(startLabel); startField.appendChild(startInput);
+
+      const endField = document.createElement('div');
+      endField.className = 'field';
+      const endLabel = document.createElement('label');
+      endLabel.textContent = 'To';
+      const endInput = document.createElement('input');
+      endInput.type = 'date';
+      endInput.value = item.end || '';
+      endInput.addEventListener('change', () => { item.end = endInput.value; scheduleSave(); calculate(); });
+      endField.appendChild(endLabel); endField.appendChild(endInput);
+
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-btn';
+      removeBtn.type = 'button';
+      removeBtn.setAttribute('aria-label', 'Remove');
+      removeBtn.textContent = '×';
+      removeBtn.addEventListener('click', () => {
+        awayRanges = awayRanges.filter(r => r.id !== item.id);
+        renderAwayList(); scheduleSave(); calculate();
+      });
+
+      row.appendChild(startField); row.appendChild(endField); row.appendChild(removeBtn);
+      awayListEl.appendChild(row);
+    });
+  }
+
+  addAwayBtn.addEventListener('click', () => {
+    awayRanges.push({ id: idCounter++, start: '', end: '' });
+    renderAwayList(); scheduleSave(); calculate();
+  });
+
+  // ---- Calculation ----
+  function parseDate(str) {
+    if (!str) return null;
+    const d = new Date(str + 'T00:00:00');
+    return isNaN(d.getTime()) ? null : d;
+  }
+  function daysBetweenInclusive(a, b) { return Math.floor((b.getTime() - a.getTime()) / 86400000) + 1; }
+  function clampNonNeg(n) { return Math.max(0, isNaN(n) ? 0 : n); }
+  function fmtMoney(n) { const sign = n < 0 ? '-' : ''; return sign + '$' + Math.abs(n).toFixed(2); }
+
+  function calculate() {
+    warnMsg.textContent = '';
+    const end = parseDate(endDateEl.value);
+    const balance = parseFloat(balanceEl.value);
+    const costBreakfast = clampNonNeg(parseFloat(costBreakfastEl.value));
+    const costLunch = clampNonNeg(parseFloat(costLunchEl.value));
+    const costDinner = clampNonNeg(parseFloat(costDinnerEl.value));
+    const bfInRoom = Math.min(7, clampNonNeg(parseFloat(bfInRoomEl.value)));
+    const lunchInRoom = Math.min(7, clampNonNeg(parseFloat(lunchInRoomEl.value)));
+    const dinnerOut = clampNonNeg(parseFloat(dinnerOutEl.value));
+    const dinnerInRoom = clampNonNeg(parseFloat(dinnerInRoomEl.value));
+
+    const bfOnPlan = Math.max(0, 7 - bfInRoom);
+    const lunchOnPlan = Math.max(0, 7 - lunchInRoom);
+    const dinnerOnPlan = Math.max(0, 7 - dinnerOut - dinnerInRoom);
+    const onPlanMealsPerWeek = bfOnPlan + lunchOnPlan + dinnerOnPlan;
+    const weeklySpend = (bfOnPlan * costBreakfast) + (lunchOnPlan * costLunch) + (dinnerOnPlan * costDinner);
+    const mealsPerDayEquivalent = onPlanMealsPerWeek / 7;
+
+    if (!end) {
+      [perMealAmount, perDayAmount, daysLeft, mealsLeft, awayDaysCount,
+       leftoverAmount, weeklySpendStat, onPlanMealsWeekStat, weeksLeftStat, totalProjectedSpendStat]
+        .forEach(node => node.textContent = '—');
+      return;
+    }
+
+    if (end < today) {
+      warnMsg.textContent = 'That end date is in the past.';
+      [perMealAmount, perDayAmount].forEach(n => n.textContent = '$0.00');
+      [daysLeft, mealsLeft, awayDaysCount].forEach(n => n.textContent = '0');
+      leftoverAmount.textContent = isNaN(balance) ? '—' : fmtMoney(balance);
+      weeklySpendStat.textContent = fmtMoney(weeklySpend);
+      onPlanMealsWeekStat.textContent = onPlanMealsPerWeek;
+      weeksLeftStat.textContent = '0';
+      totalProjectedSpendStat.textContent = '$0.00';
+      return;
+    }
+
+    const totalDays = daysBetweenInclusive(today, end);
+    const awaySet = new Set();
+    awayRanges.forEach(({ start, end: rEnd }) => {
+      const s = parseDate(start), e = parseDate(rEnd);
+      if (!s || !e) return;
+      const from = s < today ? today : s;
+      const to = e > end ? end : e;
+      if (from > to) return;
+      for (let d = new Date(from); d <= to; d.setDate(d.getDate() + 1)) awaySet.add(d.toISOString().slice(0, 10));
+    });
+
+    const awayCount = awaySet.size;
+    const eatingDays = Math.max(totalDays - awayCount, 0);
+    const totalOnPlanMeals = eatingDays * mealsPerDayEquivalent;
+    const weeksRemaining = eatingDays / 7;
+
+    daysLeft.textContent = eatingDays;
+    awayDaysCount.textContent = awayCount;
+    mealsLeft.textContent = totalOnPlanMeals > 0 ? Math.round(totalOnPlanMeals) : '0';
+    weeklySpendStat.textContent = fmtMoney(weeklySpend);
+    onPlanMealsWeekStat.textContent = onPlanMealsPerWeek;
+    weeksLeftStat.textContent = weeksRemaining.toFixed(1);
+
+    if (isNaN(balance) || balance < 0) {
+      perMealAmount.textContent = '—';
+      perDayAmount.textContent = '—';
+      leftoverAmount.textContent = '—';
+      totalProjectedSpendStat.textContent = fmtMoney(weeklySpend * weeksRemaining);
+      return;
+    }
+
+    if (totalOnPlanMeals <= 0) {
+      perMealAmount.textContent = '$0.00';
+      perDayAmount.textContent = '$0.00';
+      warnMsg.textContent = 'No eating days (or on-plan meals) left in that window.';
+    } else {
+      perMealAmount.textContent = fmtMoney(balance / totalOnPlanMeals);
+      perDayAmount.textContent = fmtMoney(eatingDays > 0 ? balance / eatingDays : 0);
+    }
+
+    const totalProjectedSpend = weeklySpend * weeksRemaining;
+    const projectedLeftover = balance - totalProjectedSpend;
+    totalProjectedSpendStat.textContent = fmtMoney(totalProjectedSpend);
+    leftoverAmount.textContent = fmtMoney(projectedLeftover);
+    leftoverLabel.textContent = projectedLeftover >= 0 ? 'projected left at semester\u2019s end' : 'projected shortfall by semester\u2019s end';
+  }
+
+  allInputs.forEach(elm => {
+    elm.addEventListener('input', () => { scheduleSave(); calculate(); });
+    elm.addEventListener('change', () => { scheduleSave(); calculate(); });
+  });
+
+  // ---- Boot ----
+  let remembered = null;
+  try { remembered = localStorage.getItem(LOCAL_USER_KEY); } catch (e) {}
+  if (remembered) {
+    showApp(remembered);
+  } else {
+    showLogin();
+  }
+})();
+</script>
+</body>
+</html>
