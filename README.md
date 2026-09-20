@@ -1,62 +1,58 @@
-# SU Meals — deploy guide
+# College Meal Plan Calculator
 
-This is a small multi-user app: anyone types a username (e.g. `simon.reeder`), no
-password, and their meal-plan budget is saved server-side under Vercel Blob storage
-so it follows them across devices. It's also a PWA, so it can be added to a phone's
-home screen.
+A small multi-user app: anyone types a username (e.g. `simon.reeder`), no password,
+and their meal-plan budget is saved server-side in Vercel Blob storage so it follows
+them across devices. It's also a PWA, so it can be added to a phone's home screen.
 
-## 1. Deploy to Vercel
+## Live deployment
 
-From this folder:
+- **App:** https://mealplan-calc.vercel.app
+- **Repo:** https://github.com/joshreeder/mealplan-calc
+- **Vercel project:** `mealplan-calc` (team `josh-reeders-projects`)
+
+The Vercel project is connected to this GitHub repo, so **pushing to `main`
+deploys automatically**. To deploy by hand instead:
 
 ```bash
-npm i -g vercel   # if you don't already have it
-cd su-meals
-vercel            # first run: link/create the project, follow the prompts
-vercel --prod     # deploy to production
+vercel --prod
 ```
 
-Name the project whatever you like (e.g. `su-meals`) when prompted — it'll get a
-`*.vercel.app` URL immediately.
+Blob storage is already set up: the store `mealplan-calc-blob` is linked to the
+project, which supplies the `BLOB_READ_WRITE_TOKEN` env var that `api/budget.js`
+needs. The store is public-access because the read path fetches blob URLs without
+auth.
 
-## 2. Add Blob storage
+## Layout
 
-In the Vercel dashboard → your project → **Storage** tab → **Create Database** →
-**Blob**. Create it and connect it to this project. Vercel will automatically add
-a `BLOB_READ_WRITE_TOKEN` environment variable to the project — that's all the
-`api/budget.js` function needs. Redeploy once (`vercel --prod`) after connecting it
-so the function picks up the new env var.
+- `public/` — the entire front end, one self-contained `index.html`, served as static files.
+- `api/budget.js` — serverless function. `GET /api/budget?user=<name>` reads a profile,
+  `POST /api/budget` writes one. Each user is one JSON file at `users/<username>.json`.
 
-## 3. Point sumeals.simonapollo.com at it
+## Adding a custom domain
 
-In the Vercel dashboard → your project → **Settings → Domains** → add
-`sumeals.simonapollo.com`. Vercel will show you a DNS record to add (usually a
-CNAME to `cname.vercel-dns.com`).
+In the Vercel dashboard go to **Settings → Domains** and add the hostname. Vercel
+shows a DNS record to add, usually a CNAME to `cname.vercel-dns.com`.
 
-Then, in Cloudflare (where simonapollo.com's DNS lives):
-- Add a **CNAME** record: name `sumeals`, target `cname.vercel-dns.com`
-- Set it to **DNS only** (grey cloud, not the orange "proxied" cloud) — Vercel
-  needs to terminate SSL itself for the certificate to issue cleanly.
+If DNS lives in Cloudflare, add the **CNAME** record and set it to **DNS only**
+(grey cloud, not the orange proxied cloud), so Vercel can terminate SSL and issue
+the certificate cleanly. Verification and certificate issuance take a few minutes
+to a couple of hours.
 
-It can take a few minutes to a couple hours to verify and get an SSL certificate.
+## Using it
 
-## 4. Using it
+- Open the site, type a username (letters, numbers, dots and dashes only, since it's
+  just an identifier rather than a real login), then tap Continue.
+- "switch user" at the top lets someone else use the same device or browser.
+- On iPhone: Share → Add to Home Screen. On Android: browser menu → Add to Home Screen.
 
-- Open the site, type a username (letters/numbers/dots/dashes only — it's just an
-  identifier, not a real login), tap Continue.
-- Everyone's data is stored separately by username, keyed as `users/<username>.json`
-  in Blob storage.
-- "switch user" at the top lets someone else use the same device/browser.
-- On an iPhone: Share → Add to Home Screen. On Android: browser menu → Add to Home
-  Screen / Install app.
+## Notes and limits
 
-## Notes / limits
-
-- There's no real authentication — anyone who knows or guesses a username can view
-  or overwrite that person's budget. Fine for this since nothing sensitive is stored,
-  but worth knowing.
-- I used Vercel Blob (simple JSON-per-user files) rather than a Postgres/Neon database,
-  since it needs no extra sign-up and is a perfect fit for one small JSON doc per user.
-  If you'd rather have a real database (e.g. to later add a coffee or groceries budget
-  as separate structured tables), Vercel's Storage tab also offers a one-click Neon
-  Postgres integration — say the word and I'll adapt `api/budget.js` to use it instead.
+- **There is no authentication.** Anyone who knows or guesses a username can read or
+  overwrite that person's budget, and the blob store is public-access, so saved
+  profiles are readable by URL. Fine for non-sensitive data, but worth knowing.
+- Storage is Vercel Blob, one JSON document per user, rather than a database. If the
+  app ever needs real structured data (say a separate coffee or groceries budget),
+  Vercel's Storage tab offers a one-click Neon Postgres integration and
+  `api/budget.js` can be adapted to it.
+- The in-app "Heads up" note about quarter rollover and the $250 cap is specific to
+  Seattle U. Update it if this is used for a different school.
